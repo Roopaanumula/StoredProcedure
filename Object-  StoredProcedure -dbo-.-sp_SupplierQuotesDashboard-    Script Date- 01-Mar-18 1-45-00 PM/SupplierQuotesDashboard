@@ -1,0 +1,27 @@
+/****** Object:  StoredProcedure [dbo].[sp_SupplierQuotesDashboard]    Script Date: 01-Mar-18 1:45:00 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:      <Roopa Anumula>
+-- Create Date: <16-Feb-2018 >
+-- Description: <Develop Stored Procedure for Service Suppliers Quotes Info>
+-- =============================================
+ALTER PROCEDURE [dbo].[sp_SupplierQuotesDashboard] 
+(
+@Provider_Id int
+)
+AS
+         BEGIN
+             SET NOCOUNT ON;
+ 
+			 select @Provider_Id 'ProviderId',		
+(select COUNT(1) from JobQuote where Status = 'Opening' and ProviderId=@Provider_Id) 'Open',
+(select COUNT(1) from JobQuote where Status = 'Unsuccessful' and ProviderId=@Provider_Id) 'Unsuccessful',
+(select COUNT(1) from JobQuote where Status = 'accepted' and ProviderId=@Provider_Id) 'Accepted',
+(Select COUNT(1) from JobQuote where ProviderId=@Provider_Id and status<>'delete') 'Total'
+From JobQuote
+WHERE providerId = @Provider_Id
+Group by ProviderId;
+         END;
