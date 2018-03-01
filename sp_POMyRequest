@@ -1,0 +1,60 @@
+/****** Object:  StoredProcedure [dbo].[sp_POMyRequest]    Script Date: 01-Mar-18 1:47:56 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:      <Author, , Roopa Anumula>
+-- Create Date: <Create Date, 28-Feb-2018, >
+-- Description: <Description,PO My Request with search, sort, and pagination  >
+-- =============================================
+ALTER PROCEDURE [dbo].[sp_POMyRequest]
+( 
+    @SearchString nvarchar(max),
+	@PageNum INT,
+	@SortString nvarchar(20),
+	@Status nVarchar(20),
+	@Ownerid INT,
+	@PageSize INT = 10
+)
+As
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+
+    -- Insert statements for procedure here
+   
+   Select	pr.PropertyId,
+		    Concat(A.Number,' ',A.Street,' ', A.Suburb,' ',A.city,' ',A.PostCode) As FullAddress,
+			rs.Name as RequestStatus, 
+			rt.Name as RequestType, 
+			prm.Id,
+			prm.NewFileName as NewMediaFile,
+			prm.OldFileName as OldMEdiaFile,
+			pr.CreatedOn as RequestedOn,
+			pr.RequestMessage as RequestDescription,
+			prt.Reason	
+	from PropertyRequest pr
+			inner join Property p on pr.PropertyId = p.Id 
+			inner join OwnerProperty op on p.Id = op.PropertyId
+			inner join Person per on op.OwnerId = per.Id
+			inner join Address A ON P.AddressId=A.AddressId
+			full outer join PropertyRequest prt on pr.RequestTypeId = prt.Id
+			full outer join PropertyRequestMedia prm on pr.Id = prm.PropertyRequestId
+			full outer join RequestType rt on pr.RequestTypeId = rt.Id
+			full outer join RequestStatus rs on pr.RequestStatusId = rs.Id		
+	where op.OwnerId =@Ownerid 
+		and (Concat(A.Number,' ',A.Street,' ', A.Suburb,' ',A.city,' ',A.PostCode) like '%'+@SearchString + '%' OR  rt.Name LIKE '%'+@SearchString + '%')
+		AND RS.Name like '%'+@Status+'%'
+			 and pr.IsActive = 1 
+			 --and prm.IsActive = 1 
+			and p.IsActive = 1
+	
+	Order by 
+		 Case @SortString when 'Latest First' Then pr.CreatedOn End Asc
+		,Case @SortString when 'Earliest First' Then pr.CreatedOn End Desc
+				
+		OFFSET (@PageNum - 1) * @PageSize  ROWS
+		FETCH NEXT @PageSize ROWS ONLY
+END
